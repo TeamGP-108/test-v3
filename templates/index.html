@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}AppHost - Python App Hosting Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="px-4 pt-5 my-5 text-center">
+        <h1 class="display-4 fw-bold text-light">Host & Run Your Applications 24/7</h1>
+        <div class="col-lg-6 mx-auto">
+            <p class="lead mb-4">
+                Deploy, manage, and host your applications with a GitHub-like file management system.
+                Build, run, and monitor your Python applications effortlessly.
+            </p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg px-4 me-sm-3">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 me-sm-3">
+                        <i class="fas fa-user-plus me-2"></i> Sign Up
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg px-4">
+                        <i class="fas fa-sign-in-alt me-2"></i> Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="container px-4 py-5" id="featured-3">
+            <h2 class="pb-2 border-bottom">Key Features</h2>
+            <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
+                <div class="feature col">
+                    <div class="feature-icon bg-primary bg-gradient">
+                        <i class="fas fa-code fa-2x p-3 text-white"></i>
+                    </div>
+                    <h3 class="mt-3">GitHub-like File Management</h3>
+                    <p>Manage your code with a familiar interface. Create folders, upload, edit, and organize your project files with version control.</p>
+                </div>
+                <div class="feature col">
+                    <div class="feature-icon bg-primary bg-gradient">
+                        <i class="fas fa-server fa-2x p-3 text-white"></i>
+                    </div>
+                    <h3 class="mt-3">24/7 Application Hosting</h3>
+                    <p>Run your applications continuously with our reliable hosting infrastructure. Deploy and forget.</p>
+                </div>
+                <div class="feature col">
+                    <div class="feature-icon bg-primary bg-gradient">
+                        <i class="fas fa-terminal fa-2x p-3 text-white"></i>
+                    </div>
+                    <h3 class="mt-3">Built-in Terminal</h3>
+                    <p>Use the integrated terminal to install dependencies, run commands, and troubleshoot your application.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- How It Works -->
+        <div class="container px-4 py-5">
+            <h2 class="pb-2 border-bottom">How It Works</h2>
+            <div class="row g-4 py-5">
+                <div class="col-md-4 d-flex align-items-start">
+                    <div class="icon-square bg-light text-dark flex-shrink-0 me-3">
+                        <i class="fas fa-folder-plus"></i>
+                    </div>
+                    <div>
+                        <h3>1. Create Project Structure</h3>
+                        <p>Create a new project, organize files in folders, and upload or create your code directly in our online editor.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-start">
+                    <div class="icon-square bg-light text-dark flex-shrink-0 me-3">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div>
+                        <h3>2. Configure & Install</h3>
+                        <p>Use the terminal to install dependencies, set up your application's entry point and configuration settings.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-start">
+                    <div class="icon-square bg-light text-dark flex-shrink-0 me-3">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <div>
+                        <h3>3. Deploy & Monitor</h3>
+                        <p>Deploy your application with a single click and monitor its performance in real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

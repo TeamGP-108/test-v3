@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - AppHost{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">{{ project.name }}</li>
+                </ol>
+            </nav>
+            <h1>
+                <i class="fas fa-folder-open me-2"></i>{{ project.name }}
+                {% if project.is_running %}
+                    <span class="badge bg-success">Running</span>
+                {% endif %}
+            </h1>
+            {% if project.description %}
+                <p class="lead">{{ project.description }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{{ url_for('app_manager', project_id=project.id) }}" class="btn btn-success">
+                <i class="fas fa-play me-1"></i> App Manager
+            </a>
+        </div>
+    </div>
+    
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="projectTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if not active_tab or active_tab == 'files' %}active{% endif %}" 
+                            id="files-tab" 
+                            data-bs-toggle="tab" 
+                            data-bs-target="#files" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="files" 
+                            aria-selected="{% if not active_tab or active_tab == 'files' %}true{% else %}false{% endif %}">
+                        <i class="fas fa-file me-1"></i> Files
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if active_tab == 'commits' %}active{% endif %}" 
+                            id="commits-tab" 
+                            data-bs-toggle="tab" 
+                            data-bs-target="#commits" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="commits" 
+                            aria-selected="{% if active_tab == 'commits' %}true{% else %}false{% endif %}">
+                        <i class="fas fa-history me-1"></i> Commits
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="projectTabsContent">
+                <div class="tab-pane fade {% if not active_tab or active_tab == 'files' %}show active{% endif %}" id="files" role="tabpanel" aria-labelledby="files-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <form id="upload-form" method="POST" action="{{ url_for('upload_file', project_id=project.id) }}" enctype="multipart/form-data">
+                                <div class="input-group">
+                                    <input type="file" class="form-control" id="file-upload" name="file" required>
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-upload me-1"></i> Upload
+                                    </button>
+                                </div>
+                                <div id="file-preview"></div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <form id="new-file-form" method="POST" action="{{ url_for('new_file', project_id=project.id) }}">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="filename" name="filename" placeholder="New file name" required>
+                                    <button class="btn btn-outline-secondary" type="submit">
+                                        <i class="fas fa-plus me-1"></i> Create File
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <form id="new-folder-form" method="POST" action="{{ url_for('create_folder', project_id=project.id) }}">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="folder_name" name="folder_name" placeholder="New folder name" required>
+                                    <button class="btn btn-outline-secondary" type="submit">
+                                        <i class="fas fa-folder-plus me-1"></i> Create Folder
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Folders Section -->
+                    {% if folders %}
+                        <h5 class="mt-4 mb-3"><i class="fas fa-folder me-2"></i>Folders</h5>
+                        <div class="folder-list">
+                            {% for folder in folders %}
+                                <div class="folder-item">
+                                    <div>
+                                        <i class="fas fa-folder text-warning me-2"></i>
+                                        <a href="{{ url_for('folder_view', project_id=project.id, folder_id=folder.id) }}">
+                                            {{ folder.name }}
+                                        </a>
+                                    </div>
+                                    <div class="folder-actions">
+                                        <form class="delete-folder-form" method="POST" action="{{ url_for('delete_folder', project_id=project.id, folder_id=folder.id) }}" data-folder-name="{{ folder.name }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Files Section -->
+                    <h5 class="mt-4 mb-3"><i class="fas fa-file me-2"></i>Files</h5>
+                    {% if files %}
+                        <div class="file-list">
+                            {% for file in files %}
+                                <div class="file-item">
+                                    <div>
+                                        {% if file.is_binary %}
+                                            <i class="fas fa-file-archive text-warning me-2"></i>
+                                        {% elif file.filename.endswith('.py') %}
+                                            <i class="fab fa-python text-primary me-2"></i>
+                                        {% elif file.filename.endswith('.js') %}
+                                            <i class="fab fa-js text-warning me-2"></i>
+                                        {% elif file.filename.endswith('.html') %}
+                                            <i class="fab fa-html5 text-danger me-2"></i>
+                                        {% elif file.filename.endswith('.css') %}
+                                            <i class="fab fa-css3-alt text-info me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-file text-muted me-2"></i>
+                                        {% endif %}
+                                        {{ file.filename }}
+                                    </div>
+                                    <div class="file-actions">
+                                        {% if not file.is_binary %}
+                                            <a href="{{ url_for('edit_file', project_id=project.id, file_id=file.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                        <form class="delete-file-form" method="POST" action="{{ url_for('delete_file', project_id=project.id, file_id=file.id) }}" data-filename="{{ file.filename }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {% if not folders %}
+                            <div class="alert alert-info mt-3">
+                                <h5><i class="fas fa-info-circle me-2"></i>No files yet</h5>
+                                <p>Upload a file, create a new folder or create a new file to get started.</p>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mt-3">
+                                <p>No files in the root directory. You can add files here or inside folders.</p>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="tab-pane fade {% if active_tab == 'commits' %}show active{% endif %}" id="commits" role="tabpanel" aria-labelledby="commits-tab">
+                    {% if commits %}
+                        <div class="list-group">
+                            {% for commit in commits %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ commit.message }}</h5>
+                                        <small>{{ commit.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                    </div>
+                                    <p class="mb-1">
+                                        <i class="fas fa-user-circle me-1"></i>
+                                        {{ commit.user.username }}
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-file-alt me-1"></i>
+                                        {{ commit.file_versions.count() }} files changed
+                                    </small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle me-2"></i>No commits yet</h5>
+                            <p>Save changes to your files to create commits.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+
+{% block title %}App Manager - {{ project.name }} - AppHost{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
+                <li class="breadcrumb-item active">App Manager</li>
+            </ol>
+        </nav>
+        <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-outline-primary">
+            <i class="fas fa-folder-open me-1"></i> Project Files
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>App Control</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Status</h6>
+                        <div id="app-status-indicator" data-is-running="{{ 'True' if project.is_running else 'False' }}">
+                            {% if project.is_running %}
+                                <span class="badge bg-success">Running</span>
+                            {% else %}
+                                <span class="badge bg-danger">Stopped</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- REQUIREMENTS STATUS SECTION -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Dependencies</h6>
+                            <div>
+                                <button id="create-requirements-btn" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-plus"></i> Create Test File
+                                </button>
+                                <button id="refresh-requirements-btn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div id="requirements-status-card" class="card border {% if project.has_requirements_file %}border-success{% else %}border-warning{% endif %} mb-2">
+                            <div class="card-body p-2">
+                                {% if project.has_requirements_file %}
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-success me-2"><i class="fas fa-check-circle"></i></span>
+                                        <strong>requirements.txt detected</strong>
+                                    </div>
+                                    <small class="text-muted">Dependencies will be installed automatically when you run your application</small>
+                                {% else %}
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-warning me-2"><i class="fas fa-exclamation-circle"></i></span>
+                                        <strong>No requirements.txt</strong>
+                                    </div>
+                                    <small class="text-muted">Dependencies will not be installed. Create a requirements.txt file to enable automatic installation.</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if project.is_running %}
+                        <div class="mb-3">
+                            <h6>Process ID</h6>
+                            <p>{{ project.pid }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Port</h6>
+                            <p>{{ project.port }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Entry Point</h6>
+                            <p>{{ project.entry_point }}</p>
+                        </div>
+
+                        <form id="stop-app-form" method="POST" action="{{ url_for('stop_app', project_id=project.id) }}">
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-stop me-1"></i> Stop Application
+                            </button>
+                        </form>
+                    {% else %}
+                        <form id="run-app-form" method="POST" action="{{ url_for('run_application', project_id=project.id) }}">
+
+                            <div class="mb-3">
+                                <label for="entry-point" class="form-label">Entry Point</label>
+                                <select class="form-select" id="entry-point" name="entry_point" required>
+                                    <option value="">Select an entry point</option>
+                                    {% for file in files %}
+                                        {% if file.filename.endswith('.py') or file.filename.endswith('.js') %}
+                                            <option value="{{ file.path }}" {% if project.entry_point == file.path %}selected{% endif %}>
+                                                {{ file.path }}
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select the main file to run your application.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-play me-1"></i> Run Application
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="mt-3">
+                        <h6>Requirements Management</h6>
+
+                        <div class="d-grid gap-2">
+                            <form method="POST" action="{{ url_for('generate_requirements', project_id=project.id) }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                                    <i class="fas fa-file-code me-1"></i> Generate requirements.txt
+                                </button>
+                            </form>
+                            <a href="{{ url_for('requirements_editor', project_id=project.id) }}" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="fas fa-edit me-1"></i> Edit requirements.txt
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-terminal me-2"></i>Application Logs</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="app-log-container">
+                        <pre id="log-content" data-project-id="{{ project.id }}">{{ log_content }}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-terminal me-2"></i>Terminal</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" id="clear-terminal">
+                            <i class="fas fa-eraser me-1"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="terminal-container">
+                        <div id="terminal-output"></div>
+                        <div class="terminal-input-container">
+                            <form id="terminal-form" data-project-id="{{ project.id }}">
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" class="form-control" id="terminal-command" placeholder="Enter command (e.g. pip install flask)">
+                                    <button type="submit" class="btn btn-primary">Run</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>System Logs</h5>
+                </div>
+                <div class="card-body">
+                    {% if logs %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Type</th>
+                                        <th>Content</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs %}
+                                        <tr>
+                                            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td>
+                                                {% if log.log_type == 'system' %}
+                                                    <span class="badge bg-info">System</span>
+                                                {% elif log.log_type == 'stdout' %}
+                                                    <span class="badge bg-success">STDOUT</span>
+                                                {% elif log.log_type == 'stderr' %}
+                                                    <span class="badge bg-danger">STDERR</span>
+                                                {% elif log.log_type == 'terminal' %}
+                                                    <span class="badge bg-warning">Terminal</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ log.log_content }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No system logs available
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize terminal functionality
+        initTerminal();
+
+        // Always refresh logs initially
+        refreshLogs();
+
+        // Poll for logs periodically if application is running
+        const isRunning = document.getElementById('app-status-indicator').dataset.isRunning === 'True';
+        if (isRunning) {
+            // Refresh logs more frequently (every 2 seconds) for real-time feel
+            setInterval(refreshLogs, 2000);
+        } else {
+            // Still refresh occasionally even if not running
+            setInterval(refreshLogs, 10000);
+        }
+
+        // Add event listener for the create requirements test file button
+        document.getElementById('create-requirements-btn').addEventListener('click', function() {
+            // Show loading spinner on the button
+            const createBtn = this;
+            const originalContent = createBtn.innerHTML;
+            createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            createBtn.disabled = true;
+
+            // Create test requirements.txt file
+            fetch(`/project/{{ project.id }}/create-requirements-test`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Create requirements response:', data);
+
+                    if (data.success) {
+                        // Show success message
+                        const successInfo = document.createElement('div');
+                        successInfo.className = 'alert alert-success mt-2 small';
+                        successInfo.innerHTML = `<p>${data.message}</p><p>Path: ${data.path}</p>`;
+
+                        // Insert success info after the requirements status card
+                        const statusCard = document.getElementById('requirements-status-card');
+                        if (statusCard.nextElementSibling && statusCard.nextElementSibling.classList.contains('alert')) {
+                            statusCard.parentNode.removeChild(statusCard.nextElementSibling);
+                        }
+                        statusCard.parentNode.insertBefore(successInfo, statusCard.nextSibling);
+
+                        // Refresh requirements status
+                        checkRequirementsStatus();
+                    } else {
+                        // Show error message
+                        const errorInfo = document.createElement('div');
+                        errorInfo.className = 'alert alert-danger mt-2 small';
+                        errorInfo.innerHTML = `<p>Error: ${data.message}</p>`;
+
+                        // Insert error info after the requirements status card
+                        const statusCard = document.getElementById('requirements-status-card');
+                        if (statusCard.nextElementSibling && statusCard.nextElementSibling.classList.contains('alert')) {
+                            statusCard.parentNode.removeChild(statusCard.nextElementSibling);
+                        }
+                        statusCard.parentNode.insertBefore(errorInfo, statusCard.nextSibling);
+                    }
+
+                    // Restore button after a short delay
+                    setTimeout(() => {
+                        createBtn.innerHTML = originalContent;
+                        createBtn.disabled = false;
+                    }, 500);
+                })
+                .catch(error => {
+                    console.error('Error creating requirements:', error);
+
+                    // Show error message
+                    const errorInfo = document.createElement('div');
+                    errorInfo.className = 'alert alert-danger mt-2 small';
+                    errorInfo.innerHTML = `<p>Error creating requirements: ${error.message || 'Unknown error'}</p>`;
+
+                    // Insert error info after the requirements status card
+                    const statusCard = document.getElementById('requirements-status-card');
+                    if (statusCard.nextElementSibling && statusCard.nextElementSibling.classList.contains('alert')) {
+                        statusCard.parentNode.removeChild(statusCard.nextElementSibling);
+                    }
+                    statusCard.parentNode.insertBefore(errorInfo, statusCard.nextSibling);
+
+                    // Restore button
+                    createBtn.innerHTML = originalContent;
+                    createBtn.disabled = false;
+                });
+        });
+
+        // Add event listener for the refresh requirements button
+        document.getElementById('refresh-requirements-btn').addEventListener('click', function() {
+            // Show loading spinner on the button
+            const refreshBtn = this;
+            const originalContent = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            refreshBtn.disabled = true;
+
+            // Check requirements status
+            checkRequirementsStatus()
+                .then((data) => {
+                    console.log('Requirements check response:', data);
+
+                    // Add debug info to the page
+                    const debugInfo = document.createElement('div');
+                    debugInfo.className = 'alert alert-info mt-2 small';
+                    debugInfo.innerHTML = `
+                        <h6>Debug Info:</h6>
+                        <p>Project folder: ${data.project_folder}</p>
+                        <p>Requirements path: ${data.requirements_path}</p>
+                        <p>Files in folder: ${data.files_in_folder.join(', ')}</p>
+                        <p>Has requirements: ${data.has_requirements}</p>
+                        <p>Requirements flag: ${data.requirements_file_flag}</p>
+                        <p>Timestamp: ${data.timestamp}</p>
+                    `;
+
+                    // Insert debug info after the requirements status card
+                    const statusCard = document.getElementById('requirements-status-card');
+                    if (statusCard.nextElementSibling && statusCard.nextElementSibling.classList.contains('alert-info')) {
+                        statusCard.parentNode.removeChild(statusCard.nextElementSibling);
+                    }
+                    statusCard.parentNode.insertBefore(debugInfo, statusCard.nextSibling);
+
+                    // Restore button after a short delay
+                    setTimeout(() => {
+                        refreshBtn.innerHTML = originalContent;
+                        refreshBtn.disabled = false;
+                    }, 500);
+                })
+                .catch((error) => {
+                    console.error('Error checking requirements:', error);
+                    // Restore button in case of error
+                    refreshBtn.innerHTML = originalContent;
+                    refreshBtn.disabled = false;
+
+                    // Show error message
+                    const errorInfo = document.createElement('div');
+                    errorInfo.className = 'alert alert-danger mt-2 small';
+                    errorInfo.innerHTML = `<p>Error checking requirements: ${error.message || 'Unknown error'}</p>`;
+
+                    // Insert error info after the requirements status card
+                    const statusCard = document.getElementById('requirements-status-card');
+                    if (statusCard.nextElementSibling && statusCard.nextElementSibling.classList.contains('alert-info')) {
+                        statusCard.parentNode.removeChild(statusCard.nextElementSibling);
+                    }
+                    statusCard.parentNode.insertBefore(errorInfo, statusCard.nextSibling);
+                });
+        });
+    });
+
+    // Function to check if requirements.txt exists
+    function checkRequirementsStatus() {
+        return new Promise((resolve, reject) => {
+            fetch(`/project/{{ project.id }}/check-requirements`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const statusCard = document.getElementById('requirements-status-card');
+
+                        if (data.has_requirements) {
+                            // Update UI to show requirements.txt exists
+                            statusCard.className = 'card border border-success mb-2';
+                            statusCard.innerHTML = `
+                                <div class="card-body p-2">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-success me-2"><i class="fas fa-check-circle"></i></span>
+                                        <strong>requirements.txt detected</strong>
+                                    </div>
+                                    <small class="text-muted">Dependencies will be installed automatically when you run your application</small>
+                                </div>
+                            `;
+                        } else {
+                            // Update UI to show requirements.txt does not exist
+                            statusCard.className = 'card border border-warning mb-2';
+                            statusCard.innerHTML = `
+                                <div class="card-body p-2">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-warning me-2"><i class="fas fa-exclamation-circle"></i></span>
+                                        <strong>No requirements.txt</strong>
+                                    </div>
+                                    <small class="text-muted">Dependencies will not be installed. Create a requirements.txt file to enable automatic installation.</small>
+                                </div>
+                            `;
+                        }
+                        resolve(data);
+                    } else {
+                        reject(new Error('Failed to check requirements status'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking requirements status:', error);
+                    reject(error);
+                });
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ file.filename }} - {{ project.name }} - AppHost{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
+                {% if file.folder_id %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('folder_view', project_id=project.id, folder_id=file.folder_id) }}">{{ file.folder.name }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active">{{ file.filename }}</li>
+            </ol>
+        </nav>
+        <div>
+            <span id="save-status" class="me-2 d-none"></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-commit-message">
+                <i class="fas fa-comment-alt me-1"></i> Commit Message
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" id="save-button">
+                <i class="fas fa-save me-1"></i> Save
+            </button>
+        </div>
+    </div>
+    
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    {% if file.filename.endswith('.py') %}
+                        <i class="fab fa-python text-primary me-2"></i>
+                    {% elif file.filename.endswith('.js') %}
+                        <i class="fab fa-js text-warning me-2"></i>
+                    {% elif file.filename.endswith('.html') %}
+                        <i class="fab fa-html5 text-danger me-2"></i>
+                    {% elif file.filename.endswith('.css') %}
+                        <i class="fab fa-css3-alt text-info me-2"></i>
+                    {% else %}
+                        <i class="fas fa-file text-muted me-2"></i>
+                    {% endif %}
+                    {{ file.filename }}
+                </h5>
+                <small class="text-muted">Last updated: {{ file.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <form id="save-file-form" data-project-id="{{ project.id }}" data-file-id="{{ file.id }}">
+                <textarea id="code-editor" data-file-extension="{{ file_extension }}">{{ content }}</textarea>
+                <div id="commit-message-container" class="commit-message-container p-3 border-top d-none">
+                    <div class="form-group">
+                        <label for="commit-message">Commit Message</label>
+                        <input type="text" class="form-control" id="commit-message" name="commit_message" placeholder="Describe your changes">
+                        <small class="form-text text-muted">Briefly describe what changes you made to this file.</small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleCommitMessageBtn = document.getElementById('toggle-commit-message');
+    const commitMessageContainer = document.getElementById('commit-message-container');
+    const saveButton = document.getElementById('save-button');
+    const saveForm = document.getElementById('save-file-form');
+    
+    if (toggleCommitMessageBtn && commitMessageContainer) {
+        toggleCommitMessageBtn.addEventListener('click', function() {
+            commitMessageContainer.classList.toggle('d-none');
+        });
+    }
+    
+    if (saveButton && saveForm) {
+        saveButton.addEventListener('click', function() {
+            saveFile();
+        });
+    }
+});
+</script>
+{% endblock %}
