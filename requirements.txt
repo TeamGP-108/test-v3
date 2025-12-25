@@ -1,0 +1,6 @@
+psutil
+flask
+werkzeug
+jinja2
+flask-sqlalchemy
+flask-login
